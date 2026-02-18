@@ -38,12 +38,57 @@
 
   // ── Status indicator ───────────────────────────────────────────────
   var statusEl = document.getElementById("status");
+  var statusDot = null;
+  var statusFadeTimer = null;
 
   function setStatus(text, state) {
     if (!statusEl) return;
     statusEl.textContent = text;
     statusEl.className = "status status-" + state;
+
+    // Update header status dot
+    if (statusDot) {
+      statusDot.className = "status-dot " + state;
+    }
+
+    // Auto-fade the connected status after 3 seconds
+    if (statusFadeTimer) {
+      clearTimeout(statusFadeTimer);
+      statusFadeTimer = null;
+    }
+    if (state === "connected") {
+      statusEl.style.opacity = "1";
+      statusFadeTimer = setTimeout(function () {
+        statusEl.style.opacity = "0";
+      }, 3000);
+    } else {
+      statusEl.style.opacity = "1";
+    }
   }
+
+  // ── Skeleton loading ──────────────────────────────────────────────
+  var initialLoad = true;
+
+  function showSkeleton() {
+    var skeleton = document.createElement("div");
+    skeleton.id = "skeleton";
+    skeleton.className = "skeleton-loading";
+    for (var i = 0; i < 8; i++) {
+      var line = document.createElement("div");
+      line.className = "skeleton-line";
+      line.style.width = (30 + Math.random() * 60) + "%";
+      skeleton.appendChild(line);
+    }
+    container.appendChild(skeleton);
+  }
+
+  function hideSkeleton() {
+    var skeleton = document.getElementById("skeleton");
+    if (skeleton) skeleton.remove();
+  }
+
+  // Show skeleton on initial page load
+  showSkeleton();
 
   // ── Key mapping ──────────────────────────────────────────────────
   var KEY_MAP = {
@@ -299,9 +344,19 @@
     var header = document.createElement("div");
     header.id = "header";
 
+    statusDot = document.createElement("span");
+    statusDot.className = "status-dot connecting";
+
     repoNameEl = document.createElement("span");
     repoNameEl.id = "repo-name";
     repoNameEl.textContent = "No repo";
+
+    var leftGroup = document.createElement("div");
+    leftGroup.style.display = "flex";
+    leftGroup.style.alignItems = "center";
+    leftGroup.style.minWidth = "0";
+    leftGroup.appendChild(statusDot);
+    leftGroup.appendChild(repoNameEl);
 
     var btnGroup = document.createElement("div");
 
@@ -325,7 +380,7 @@
 
     btnGroup.appendChild(reposBtn);
     btnGroup.appendChild(settingsBtn);
-    header.appendChild(repoNameEl);
+    header.appendChild(leftGroup);
     header.appendChild(btnGroup);
     document.body.insertBefore(header, document.body.firstChild);
   }
@@ -675,6 +730,10 @@
 
         switch (msg.type) {
           case "output":
+            if (initialLoad) {
+              initialLoad = false;
+              hideSkeleton();
+            }
             term.write(msg.data);
             break;
           case "connected":

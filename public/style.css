@@ -66,6 +66,46 @@ html, body {
   color: #fff;
 }
 
+/* ── Skeleton loading ───────────────────────────────────────────── */
+.skeleton-loading {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Status dot in header ───────────────────────────────────────── */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.status-dot.connected { background: #27ae60; }
+.status-dot.connecting { background: #f1c40f; animation: pulse 1.5s infinite; }
+.status-dot.disconnected { background: #e74c3c; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 /* ── Extra keys toolbar ──────────────────────────────────────────── */
 .extra-keys {
   position: fixed;
