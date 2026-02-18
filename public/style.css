@@ -14,8 +14,51 @@
 
 html, body {
   height: 100%;
+  overflow: hidden;
   background-color: var(--bg-primary);
   color: #e0e0e0;
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Full-screen terminal container */
+#terminal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#terminal .xterm {
+  height: 100%;
+}
+
+/* Connection status indicator */
+.status {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  transition: opacity 0.3s ease, background-color 0.3s ease;
+}
+
+.status-connected {
+  background-color: rgba(39, 174, 96, 0.85);
+  color: #fff;
+}
+
+.status-connecting {
+  background-color: rgba(241, 196, 15, 0.85);
+  color: #000;
+}
+
+.status-disconnected {
+  background-color: rgba(231, 76, 60, 0.85);
+  color: #fff;
 }
