@@ -232,6 +232,343 @@
 
   createToolbar();
 
+  // ── API helpers ──────────────────────────────────────────────────
+  function fetchRepos() {
+    return fetch("/api/repos").then(function (r) { return r.json(); });
+  }
+
+  function cloneRepo(url) {
+    return fetch("/api/repos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: url }),
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+      return r.json();
+    });
+  }
+
+  function deleteRepoApi(name) {
+    return fetch("/api/repos/" + encodeURIComponent(name), { method: "DELETE" })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+        return r.json();
+      });
+  }
+
+  function switchRepo(name) {
+    return fetch("/api/session/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repo: name }),
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+      return r.json();
+    });
+  }
+
+  function saveToken(token) {
+    return fetch("/api/token", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token }),
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+      return r.json();
+    });
+  }
+
+  function getTokenStatus() {
+    return fetch("/api/token/status").then(function (r) { return r.json(); });
+  }
+
+  // ── Sheet helpers ────────────────────────────────────────────────
+  function showSheet(el) {
+    el.classList.add("visible");
+  }
+
+  function hideSheet(el) {
+    el.classList.remove("visible");
+    term.focus();
+  }
+
+  // ── Header bar ───────────────────────────────────────────────────
+  var repoNameEl;
+
+  function createHeader() {
+    var header = document.createElement("div");
+    header.id = "header";
+
+    repoNameEl = document.createElement("span");
+    repoNameEl.id = "repo-name";
+    repoNameEl.textContent = "No repo";
+
+    var btnGroup = document.createElement("div");
+
+    var reposBtn = document.createElement("button");
+    reposBtn.id = "repos-btn";
+    reposBtn.title = "Repos";
+    reposBtn.textContent = "\uD83D\uDCC2"; // folder emoji
+    reposBtn.addEventListener("click", function () {
+      refreshRepoList();
+      showSheet(repoSheet);
+    });
+
+    var settingsBtn = document.createElement("button");
+    settingsBtn.id = "settings-btn";
+    settingsBtn.title = "Settings";
+    settingsBtn.textContent = "\u2699\uFE0F"; // gear emoji
+    settingsBtn.addEventListener("click", function () {
+      refreshTokenStatus();
+      showSheet(settingsSheet);
+    });
+
+    btnGroup.appendChild(reposBtn);
+    btnGroup.appendChild(settingsBtn);
+    header.appendChild(repoNameEl);
+    header.appendChild(btnGroup);
+    document.body.insertBefore(header, document.body.firstChild);
+  }
+
+  // ── Repo bottom sheet ────────────────────────────────────────────
+  var repoSheet;
+  var repoListEl;
+  var cloneInput;
+  var cloneBtn;
+  var cloneLoadingEl;
+
+  function createRepoSheet() {
+    repoSheet = document.createElement("div");
+    repoSheet.className = "bottom-sheet";
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "sheet-backdrop";
+    backdrop.addEventListener("click", function () { hideSheet(repoSheet); });
+
+    var content = document.createElement("div");
+    content.className = "sheet-content";
+
+    // Header row
+    var sheetHeader = document.createElement("div");
+    sheetHeader.className = "sheet-header";
+    var h2 = document.createElement("h2");
+    h2.textContent = "Repositories";
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "sheet-close";
+    closeBtn.textContent = "\u2715"; // x mark
+    closeBtn.addEventListener("click", function () { hideSheet(repoSheet); });
+    sheetHeader.appendChild(h2);
+    sheetHeader.appendChild(closeBtn);
+
+    // Clone form
+    var form = document.createElement("div");
+    form.className = "clone-form";
+    cloneInput = document.createElement("input");
+    cloneInput.type = "text";
+    cloneInput.placeholder = "https://github.com/user/repo";
+    cloneBtn = document.createElement("button");
+    cloneBtn.textContent = "Clone";
+    cloneBtn.addEventListener("click", handleClone);
+    // Allow Enter key in input to trigger clone
+    cloneInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") handleClone();
+    });
+    form.appendChild(cloneInput);
+    form.appendChild(cloneBtn);
+
+    // Loading indicator
+    cloneLoadingEl = document.createElement("div");
+    cloneLoadingEl.className = "clone-loading";
+    cloneLoadingEl.style.display = "none";
+    cloneLoadingEl.textContent = "Cloning...";
+
+    // Repo list
+    repoListEl = document.createElement("div");
+    repoListEl.id = "repo-list";
+
+    content.appendChild(sheetHeader);
+    content.appendChild(form);
+    content.appendChild(cloneLoadingEl);
+    content.appendChild(repoListEl);
+    repoSheet.appendChild(backdrop);
+    repoSheet.appendChild(content);
+    document.body.appendChild(repoSheet);
+  }
+
+  function handleClone() {
+    var url = cloneInput.value.trim();
+    if (!url) return;
+
+    cloneBtn.disabled = true;
+    cloneLoadingEl.style.display = "block";
+
+    cloneRepo(url)
+      .then(function (repo) {
+        cloneInput.value = "";
+        refreshRepoList();
+        // Auto-switch to the newly cloned repo
+        return switchRepo(repo.name).then(function () {
+          repoNameEl.textContent = repo.name;
+          hideSheet(repoSheet);
+        });
+      })
+      .catch(function (err) {
+        alert("Clone failed: " + err.message);
+      })
+      .finally(function () {
+        cloneBtn.disabled = false;
+        cloneLoadingEl.style.display = "none";
+      });
+  }
+
+  function refreshRepoList() {
+    fetchRepos().then(function (repos) {
+      repoListEl.innerHTML = "";
+      if (repos.length === 0) {
+        var empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No repos cloned yet";
+        repoListEl.appendChild(empty);
+        return;
+      }
+      repos.forEach(function (repo) {
+        var item = document.createElement("div");
+        item.className = "repo-item";
+
+        var info = document.createElement("div");
+        info.className = "repo-info";
+        var nameEl = document.createElement("div");
+        nameEl.className = "repo-name";
+        nameEl.textContent = repo.name;
+        var urlEl = document.createElement("div");
+        urlEl.className = "repo-url";
+        urlEl.textContent = repo.url;
+        info.appendChild(nameEl);
+        info.appendChild(urlEl);
+
+        var delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.textContent = "\uD83D\uDDD1"; // wastebasket emoji
+        delBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (confirm("Delete " + repo.name + "?")) {
+            deleteRepoApi(repo.name).then(function () {
+              refreshRepoList();
+              // If the deleted repo was the active one, reset the header
+              if (repoNameEl.textContent === repo.name) {
+                repoNameEl.textContent = "No repo";
+              }
+            }).catch(function (err) {
+              alert("Delete failed: " + err.message);
+            });
+          }
+        });
+
+        item.addEventListener("click", function () {
+          switchRepo(repo.name).then(function () {
+            repoNameEl.textContent = repo.name;
+            hideSheet(repoSheet);
+          }).catch(function (err) {
+            alert("Switch failed: " + err.message);
+          });
+        });
+
+        item.appendChild(info);
+        item.appendChild(delBtn);
+        repoListEl.appendChild(item);
+      });
+    });
+  }
+
+  // ── Settings bottom sheet ────────────────────────────────────────
+  var settingsSheet;
+  var tokenStatusEl;
+
+  function createSettingsSheet() {
+    settingsSheet = document.createElement("div");
+    settingsSheet.className = "bottom-sheet";
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "sheet-backdrop";
+    backdrop.addEventListener("click", function () { hideSheet(settingsSheet); });
+
+    var content = document.createElement("div");
+    content.className = "sheet-content";
+
+    // Header row
+    var sheetHeader = document.createElement("div");
+    sheetHeader.className = "sheet-header";
+    var h2 = document.createElement("h2");
+    h2.textContent = "Settings";
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "sheet-close";
+    closeBtn.textContent = "\u2715"; // x mark
+    closeBtn.addEventListener("click", function () { hideSheet(settingsSheet); });
+    sheetHeader.appendChild(h2);
+    sheetHeader.appendChild(closeBtn);
+
+    // Token form
+    var form = document.createElement("div");
+    form.className = "settings-form";
+
+    var label = document.createElement("label");
+    label.textContent = "GitHub Personal Access Token";
+    label.style.fontSize = "13px";
+    label.style.color = "#aaa";
+
+    var tokenInput = document.createElement("input");
+    tokenInput.type = "password";
+    tokenInput.placeholder = "ghp_...";
+
+    tokenStatusEl = document.createElement("div");
+    tokenStatusEl.className = "token-status";
+    tokenStatusEl.textContent = "Checking...";
+
+    var saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save Token";
+    saveBtn.addEventListener("click", function () {
+      var val = tokenInput.value.trim();
+      if (!val) return;
+      saveBtn.disabled = true;
+      saveToken(val).then(function () {
+        tokenInput.value = "";
+        refreshTokenStatus();
+      }).catch(function (err) {
+        alert("Save failed: " + err.message);
+      }).finally(function () {
+        saveBtn.disabled = false;
+      });
+    });
+
+    form.appendChild(label);
+    form.appendChild(tokenInput);
+    form.appendChild(tokenStatusEl);
+    form.appendChild(saveBtn);
+
+    content.appendChild(sheetHeader);
+    content.appendChild(form);
+    settingsSheet.appendChild(backdrop);
+    settingsSheet.appendChild(content);
+    document.body.appendChild(settingsSheet);
+  }
+
+  function refreshTokenStatus() {
+    getTokenStatus().then(function (data) {
+      if (data.configured) {
+        tokenStatusEl.textContent = "Configured";
+        tokenStatusEl.className = "token-status configured";
+      } else {
+        tokenStatusEl.textContent = "Not configured";
+        tokenStatusEl.className = "token-status";
+      }
+    });
+  }
+
+  // ── Build header + sheets ────────────────────────────────────────
+  createHeader();
+  createRepoSheet();
+  createSettingsSheet();
+
   // ── Virtual keyboard viewport handling ────────────────────────────
   // Chromium VirtualKeyboard API
   if ("virtualKeyboard" in navigator) {

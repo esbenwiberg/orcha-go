@@ -1,10 +1,13 @@
 import express from "express";
+import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import * as pty from "node-pty";
-import { ensureSession } from "./session-manager.js";
+import { ensureSession, hasSession } from "./session-manager.js";
+import * as repoManager from "./repo-manager.js";
+import * as tokenStore from "./token-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +17,9 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 
 // Create HTTP server wrapping Express
 const server = createServer(app);
+
+// JSON body parsing
+app.use(express.json());
 
 // Serve static files from public/
 app.use(express.static(path.join(__dirname, "..", "public")));
@@ -25,6 +31,87 @@ app.get("/api/health", (_req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
+});
+
+// ── Repo endpoints ──────────────────────────────────────────────────
+
+app.get("/api/repos", (_req, res) => {
+  res.json(repoManager.listRepos());
+});
+
+app.post("/api/repos", (req, res) => {
+  const { url } = req.body as { url?: string };
+  if (!url) {
+    res.status(400).json({ error: "URL required" });
+    return;
+  }
+  try {
+    const token = tokenStore.getToken() || undefined;
+    const repo = repoManager.cloneRepo(url, token);
+    res.json(repo);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete("/api/repos/:name", (req, res) => {
+  try {
+    repoManager.deleteRepo(req.params.name);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ── Token endpoints ─────────────────────────────────────────────────
+
+app.put("/api/token", (req, res) => {
+  const { token } = req.body as { token?: string };
+  if (!token) {
+    res.status(400).json({ error: "Token required" });
+    return;
+  }
+  try {
+    tokenStore.storeToken(token);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get("/api/token/status", (_req, res) => {
+  res.json({ configured: tokenStore.hasToken() });
+});
+
+// ── Session endpoints ───────────────────────────────────────────────
+
+app.get("/api/session", (_req, res) => {
+  res.json({
+    active: hasSession(),
+    tmuxSession: "orcha-go",
+  });
+});
+
+app.post("/api/session/switch", (req, res) => {
+  const { repo } = req.body as { repo?: string };
+  if (!repo) {
+    res.status(400).json({ error: "Repo name required" });
+    return;
+  }
+  const repoInfo = repoManager.getRepo(repo);
+  if (!repoInfo) {
+    res.status(404).json({ error: "Repo not found" });
+    return;
+  }
+  try {
+    execSync(
+      `tmux send-keys -t orcha-go "cd '${repoInfo.path}' && clear" Enter`,
+      { stdio: "ignore" },
+    );
+    res.json({ ok: true, path: repoInfo.path });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // WebSocket server on a distinct path to avoid conflicts

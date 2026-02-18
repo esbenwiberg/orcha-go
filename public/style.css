@@ -24,10 +24,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Full-screen terminal container -- leaves room for toolbar */
+/* Full-screen terminal container -- leaves room for header + toolbar */
 #terminal {
   position: absolute;
-  top: 0;
+  top: 44px;
   left: 0;
   right: 0;
   bottom: var(--toolbar-height, 88px);
@@ -40,7 +40,7 @@ html, body {
 /* Connection status indicator */
 .status {
   position: fixed;
-  top: 8px;
+  top: 52px;
   right: 8px;
   z-index: 100;
   padding: 4px 12px;
@@ -142,4 +142,217 @@ html, body {
   color: #fff;
   border-color: #fff;
   box-shadow: 0 0 4px var(--accent);
+}
+
+/* ── Header bar ──────────────────────────────────────────────────── */
+#header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  z-index: 60;
+  font-size: 14px;
+}
+
+#header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#repo-name {
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+/* ── Bottom sheet ────────────────────────────────────────────────── */
+.bottom-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  display: none;
+}
+
+.bottom-sheet.visible {
+  display: block;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sheet-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 70vh;
+  background: var(--bg-secondary);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sheet-content h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.sheet-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Repo list item ──────────────────────────────────────────────── */
+.repo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #252525;
+  cursor: pointer;
+}
+
+.repo-item:active {
+  background: #333;
+}
+
+.repo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-item .repo-name {
+  font-weight: 500;
+}
+
+.repo-item .repo-url {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-item .delete-btn {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+/* ── Clone form ──────────────────────────────────────────────────── */
+.clone-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.clone-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.clone-form button,
+.settings-form button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.clone-form button:disabled,
+.settings-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Settings form ───────────────────────────────────────────────── */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-form input {
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.token-status {
+  font-size: 12px;
+  color: #888;
+}
+
+.token-status.configured {
+  color: #27ae60;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: #666;
+  padding: 24px 0;
+  font-size: 14px;
+}
+
+/* ── Loading indicator ───────────────────────────────────────────── */
+.clone-loading {
+  text-align: center;
+  color: #888;
+  padding: 12px 0;
+  font-size: 13px;
 }
