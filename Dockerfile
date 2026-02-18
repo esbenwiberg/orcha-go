@@ -3,7 +3,7 @@ FROM node:20-bookworm AS build
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* .npmrc ./
 RUN npm ci
 
 COPY tsconfig.json ./
@@ -11,12 +11,12 @@ COPY src/ ./src/
 
 RUN npm run build
 
-# Production stage
-FROM node:20-bookworm-slim AS production
+# Production stage -- using full bookworm for node-pty native build support
+FROM node:20-bookworm AS production
 
 LABEL org.opencontainers.image.title="Orcha Go" \
       org.opencontainers.image.description="Mobile-first web terminal for GitHub repos" \
-      org.opencontainers.image.source="https://github.com/orcha-go/orcha-go"
+      org.opencontainers.image.source="https://github.com/esbenwiberg/orcha-go"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends tmux git && \
@@ -24,8 +24,8 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+COPY package.json package-lock.json* .npmrc ./
+RUN npm ci --omit=dev && rm -f .npmrc
 
 COPY --from=build /app/dist/ ./dist/
 COPY public/ ./public/
