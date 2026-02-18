@@ -146,7 +146,7 @@ wss.on("connection", (ws: WebSocket) => {
         name: "xterm-256color",
         cols: 80,
         rows: 24,
-        cwd: process.env.HOME || "/",
+        cwd: process.env.WORKSPACE_DIR || process.env.HOME || "/",
         env: { ...process.env, TERM: "xterm-256color" } as Record<string, string>,
       },
     );

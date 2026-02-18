@@ -1,6 +1,11 @@
 import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
 const SESSION_NAME = "orcha-go";
+const WORKSPACE_DIR =
+  process.env.WORKSPACE_DIR ||
+  path.join(process.env.HOME || "/home", "workspaces");
 
 /**
  * Checks whether the tmux session exists.
@@ -20,8 +25,12 @@ export function hasSession(): boolean {
  */
 export function ensureSession(): string {
   if (!hasSession()) {
+    // Ensure workspace dir exists for tmux to start in
+    if (!fs.existsSync(WORKSPACE_DIR)) {
+      fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+    }
     execSync(
-      `tmux new-session -d -s ${SESSION_NAME} -x 80 -y 24`,
+      `tmux new-session -d -s ${SESSION_NAME} -x 80 -y 24 -c ${JSON.stringify(WORKSPACE_DIR)}`,
       {
         stdio: "ignore",
         env: { ...process.env, TERM: "xterm-256color" },

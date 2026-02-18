@@ -30,9 +30,11 @@ RUN npm ci --omit=dev && rm -f .npmrc
 COPY --from=build /app/dist/ ./dist/
 COPY public/ ./public/
 
-# Azure App Service uses /home as persistent storage
+# Azure App Service mounts /home as persistent storage
+# Set HOME=/home so tmux/git use the persistent mount
 ENV PORT=8080 \
     NODE_ENV=production \
+    HOME=/home \
     WORKSPACE_DIR=/home/workspaces \
     STORE_DIR=/home/.orcha-go
 
